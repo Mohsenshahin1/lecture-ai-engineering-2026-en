@@ -5,8 +5,25 @@ Rewriting descriptions changes whether the model uses a tool and which arguments
 """
 
 import json
+import random
 from functools import cache
 from pathlib import Path
+
+
+def make_quiz(lecture: int) -> str:
+    """Pick one term from the given lecture and return a review question and its answer.
+
+    Use when asked for review questions, such as "Give me a review question for Lecture 2".
+    """
+    glossary = load_glossary()
+    candidates = [e for e in glossary if e["lecture"] == lecture]
+    if not candidates:
+        return f"No glossary terms found for Lecture {lecture:02d}."
+    entry = random.choice(candidates)
+    return json.dumps(
+        {"question": f'What does "{entry["term"]}" mean?', "answer": entry["definition"]},
+        ensure_ascii=False,
+    )
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 MAX_RESULTS = 3
@@ -31,7 +48,7 @@ def _names(entry: dict) -> list[str]:
 def search_glossary(query: str) -> str:
     """Search the course glossary and return definitions and the sessions that cover the terms.
 
-    Use before answering about AI engineering terms or words specific to this course (AIE2026).
+    
     Put only one term to look up in query (for example, "LoRA").
     """
     q = _normalize(query)
