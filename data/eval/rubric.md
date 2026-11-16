@@ -18,7 +18,7 @@ How to grade:
 - For answers covered by "Unresolved Questions", choose unsure rather than pass / fail
 
 ## Grounding (grounding)
-
+- A general explanation of an absent term, after stating that it is not in the glossary, is not an unsupported assertion (pass)
 - Statements about information in the glossary do not contradict the referenced glossary entries
 - For information absent from the glossary, the answer states that it is not in the glossary instead of asserting guesses
 - If the answer only says "I don't know" or "It is not in the glossary", there is no contradiction, so choose pass
@@ -40,7 +40,6 @@ How to grade:
 - The answer addresses the question directly and conveys what is needed concisely
 - Choose fail if there is excessive paraphrasing or repetition of the same content (for example, repeating the same explanation with "In other words"), or too much explanation unrelated to the question
 
-## Unresolved Questions (Choose unsure for Answers Covered Here)
 
 - Whether giving a general explanation of a term after stating that it is absent from the glossary counts as "asserting guesses"
 

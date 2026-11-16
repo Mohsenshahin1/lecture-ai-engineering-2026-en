@@ -52,10 +52,10 @@ Verdict = Literal["pass", "fail", "unsure"]
 
 
 class CriterionVerdict(BaseModel):
-    """Judgment for one criterion. Request reason before verdict (reason → judgment)."""
+    """Judgment for one criterion. Request verdict before reason (judgment → reason)."""
 
-    reason: str = Field(description="Reason for the judgment, in one or two English sentences")
     verdict: Verdict = Field(description="One of pass / fail / unsure")
+    reason: str = Field(description="Reason for the judgment, in one or two English sentences")
 
 
 class JudgeResult(BaseModel):
@@ -117,8 +117,8 @@ def judge_prompt(case: dict) -> str:
 def build_judge(model, rubric: str) -> Agent:
     instructions = rubric + (
         "\n\n# Output Format\n"
-        "For each of the four criteria (grounding, scope, hint, clarity), write reason first, "
-        "then set verdict to pass / fail / unsure."
+                "For each of the four criteria (grounding, scope, hint, clarity), set verdict first, "
+        "then write the reason in one or two English sentences."
     )
     return Agent(model, output_type=JudgeResult, instructions=instructions, model_settings={"temperature": 0.0})
 
