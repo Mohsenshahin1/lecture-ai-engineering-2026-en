@@ -1,35 +1,32 @@
-# Lecture 05 Answers
-
 ## Exercises
 
-- Answering model (`[model]` shown during execution):
-- Comparison question:
-- Target materials (also record the difference in scope between full context and the other methods):
+- Answering model (`[model]` shown during execution): gemini-3.5-flash-lite
+- Comparison question: "In Lecture 02, what does LoRA freeze and what does it train? What does QLoRA add?"
+- Target materials (also record the difference in scope between full context and the other methods): Vector search, Tree, and Graph are restricted to 214 pages from Lectures 01–03. Full context is given all 9 documents / 438 pages in the materials JSON — a larger scope than the other three methods, yet it still cost more and was not faster, which strengthens the case for retrieval over simply widening context.
 
 ### Results by Method
 
 | Method | Key points and correctness of the answer | Cited pages and evidence | Time (seconds) | Input/output tokens | Model responses | Estimated generation API cost (USD) |
 |---|---|---|---|---|---|---|
-| Full context | | | | | | |
-| Vector search | | | | | | |
-| Tree | | | | | | |
-| Graph | | | | | | |
+| Full context | Correct: freezes base weights, trains A/B delta matrices, QLoRA adds 4-bit quantization | Lecture 2 · Japanese p.52 · translated PDF p.75 | 5.62 | 95,824 / 178 | 1 | $0.029192 |
+| Vector search | Correct, same core explanation, concise | Lecture 2 · p.52 | 6.59 | 2,452 / 155 | 2 | $0.001123 |
+| Tree | Correct, plus "<1% of total parameters" detail and a thinking prompt | Lecture 2 · p.52 (via section s045, 4 browse_tree calls) | 3.98 | 9,442 / 356 | 5 | $0.003723 |
+| Graph | Correct, plus specific 7B/65B figures | Lecture 2 · p.52 (seed result) | 11.72 | 5,190 / 248 | 2 | $0.002177 |
 
 <!-- State when a method was not run or a cost was unavailable. Use a separate table for each additional question. -->
 
-- Pages found by running search alone, and what their text confirmed:
-- Tool calls shown by `--trace` (names, arguments, counts, table-of-contents paths followed by Tree, etc.):
-- Examples where retrieved information was insufficient, or was retrieved but not used in the answer:
-- Method you would adopt for this use case, your reasons, and limitations of the comparison conditions:
-- Observations and questions:
+- Pages found by running search alone, and what their text confirmed: `uv run python -m app.retrieval "LoRA QLoRA difference"` returned 5 pages. Pages 1 (p.52, "LoRA and QLoRA: adapting a large model on one GPU") and 2 (p.51, "PEFT: train only part of a model") genuinely support the answer. Pages 3–5 (p.60 "Today's exercise: correct output format with QLoRA...", p.47/translated p.79 "RAG often works better for adding knowledge", p.61 "Exercise steps and deliverables") only share the term "QLoRA" but address a different exercise and a different topic (RAG vs. FT for knowledge), not this question.
+- Tool calls shown by `--trace` (names, arguments, counts, table-of-contents paths followed by Tree, etc.): Vector search: one call, `search_materials({'query': 'LoRA freeze train QLoRA'})`. Tree: four calls to `browse_tree`, following the path root → `lec02-main` → `lec02-main-s045` ("When and how to adapt the selected model") → `lec02-main-p052`, each step reading only section/page titles before choosing where to go deeper. Graph: one call, `search_graph({'query': 'LoRA freeze train QLoRA add Lecture 02'})`, with p.52 as the top seed result.
+- Examples where retrieved information was insufficient, or was retrieved but not used in the answer: The standalone retrieval test (previous bullet) returned 3 pages that share the term "QLoRA" but are irrelevant to this specific question. None of the three agent methods (vector/tree/graph) cited or used these noisy pages in their final answers — all three correctly converged on p.52 only, despite Tree's and Graph's tool outputs including neighboring pages/sections that were not directly relevant.
+- Method you would adopt for this use case, your reasons, and limitations of the comparison conditions: Vector search — it matched Full context's accuracy at about 1/26th the cost and needed only one tool call, with time close to the fastest method. Tree was actually the fastest overall, but at over 3x vector search's cost, since each `browse_tree` call returns full sibling listings, not just the matched node. Graph was the slowest of all four, likely due to the extra relationship-traversal step before generation. A real limitation: this question is answerable from a single page, so it favors precise, narrow retrieval (vector search); a question requiring evidence spread across multiple pages might favor Tree or Graph instead — this was not tested here.
+- Observations and questions: I was surprised Graph was slower than Full context despite using ~18x fewer input tokens — the traversal step itself appears to add meaningful latency. I'd like to test a "multiple pages" question (e.g., the Lecture 03 compaction-vs-memory comparison mentioned in the exercise materials) to see whether Tree or Graph pull ahead of vector search once a single page is no longer sufficient.
+
 
 ## Homework
 
-<!-- Completing any one of Basic, Implementation, or Advanced is sufficient. -->
-
-- Level attempted: Basic / Implementation / Advanced
-- What you did (files, settings, or processing changed, or retrieval method designed):
-- Comparison question and conditions held fixed (model, target materials, etc.):
-- Results (answers and evidence before/after, `--trace` output, time, token counts, estimated generation API cost, etc.):
-- Examples of improvements and remaining failures or limitations:
-- Observations and questions:
+- Level attempted: Basic
+- What you did (files, settings, or processing changed, or retrieval method designed): Changed `RAG_TOP_K` in `app/config.py` from 5 to 2 (the number of pages returned by vector search), leaving INSTRUCTIONS and tool docstrings unchanged.
+- Comparison question and conditions held fixed (model, target materials, etc.): Same question as the exercise ("In Lecture 02, what does LoRA freeze and what does it train? What does QLoRA add?"), same model (gemini-3.5-flash-lite), same target materials (Lectures 01–03), using `uv run python -m app.agent --trace`.
+- Results (answers and evidence before/after, `--trace` output, time, token counts, estimated generation API cost, etc.): The model issued the identical search query (`'LoRA freeze train QLoRA'`) and the identical single tool call in both runs. Input tokens dropped from 2,452 to 1,313 (-46%), and time dropped from 6.59s to 3.66s. Output tokens rose from 155 to 310 (the model gave a longer, more conversational answer with an extra analogy and a follow-up question), so estimated cost stayed almost flat ($0.001123 vs $0.001169) despite fewer input tokens. The answer remained fully correct in both cases, citing the same page (Lecture 2, p.52).
+- Examples of improvements and remaining failures or limitations: No accuracy regression occurred because the one page that actually supports this answer (p.52) was already the top search result, so returning fewer pages (2 instead of 5) lost no useful evidence here. This is a limitation of this single comparison: a question needing evidence from multiple pages, or one where the key page ranks lower than 2nd, might show a real drop in content_rate with RAG_TOP_K=2 that this test did not reveal.
+- Observations and questions: I expected cost to drop proportionally with input tokens, but output token variance (a longer, chattier answer on the second run) largely canceled that saving. This makes me want to test RAG_TOP_K with a "multiple pages" type question (like the Lecture 03 compaction-vs-memory example from the exercise) where I'd expect the lower top_k setting to actually miss some supporting pages, unlike this single-page case.

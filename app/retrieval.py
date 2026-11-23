@@ -4,7 +4,14 @@ import argparse
 import json
 import math
 import re
-import sqlite3
+import sys
+
+try:
+    import pysqlite3 as sqlite3
+    sys.modules["sqlite3"] = sqlite3
+except ImportError:
+    import sqlite3
+
 from contextlib import contextmanager
 from collections import defaultdict, deque
 from pathlib import Path
